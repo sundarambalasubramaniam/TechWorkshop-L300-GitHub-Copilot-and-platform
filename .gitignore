@@ -146,6 +146,7 @@ desktop.ini
 # Azure
 .azure/
 *.parameters.json
+infra/**/*.json
 
 # Keep track of local configs that may be useful to commit by exception
 !/.gitattributes
