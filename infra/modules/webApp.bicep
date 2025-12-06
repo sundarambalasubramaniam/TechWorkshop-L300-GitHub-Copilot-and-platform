@@ -13,9 +13,6 @@ param acrLoginServer string
 @description('Docker image name and tag')
 param dockerImageTag string = 'latest'
 
-@description('Application Insights Instrumentation Key')
-param appInsightsInstrumentationKey string
-
 @description('Application Insights Connection String')
 param appInsightsConnectionString string
 

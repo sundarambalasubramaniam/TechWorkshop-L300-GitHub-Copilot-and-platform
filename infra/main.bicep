@@ -87,7 +87,6 @@ module webApp 'modules/webApp.bicep' = {
     appServicePlanId: appServicePlan.outputs.appServicePlanId
     acrLoginServer: acr.outputs.loginServer
     dockerImageTag: dockerImageTag
-    appInsightsInstrumentationKey: appInsights.outputs.instrumentationKey
     appInsightsConnectionString: appInsights.outputs.connectionString
     tags: tags
   }
