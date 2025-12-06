@@ -1,0 +1,91 @@
+name: Build and Deploy to Azure
+
+on:
+  workflow_dispatch:
+    inputs:
+      environment:
+        description: 'Environment to deploy to'
+        required: true
+        default: 'dev'
+        type: choice
+        options:
+          - dev
+          - test
+          - prod
+  push:
+    branches:
+      - main
+    paths:
+      - 'src/**'
+      - 'Dockerfile'
+      - '.github/workflows/deploy-azure.yml'
+
+permissions:
+  id-token: write
+  contents: read
+
+env:
+  AZURE_LOCATION: westus3
+  APP_NAME: zavastore
+
+jobs:
+  build-and-deploy:
+    runs-on: ubuntu-latest
+    environment: ${{ github.event.inputs.environment || 'dev' }}
+    
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Azure Login
+        uses: azure/login@v2
+        with:
+          client-id: ${{ secrets.AZURE_CLIENT_ID }}
+          tenant-id: ${{ secrets.AZURE_TENANT_ID }}
+          subscription-id: ${{ secrets.AZURE_SUBSCRIPTION_ID }}
+
+      - name: Set environment variables
+        run: |
+          ENV_NAME="${{ github.event.inputs.environment || 'dev' }}"
+          echo "ENVIRONMENT_NAME=${ENV_NAME}" >> $GITHUB_ENV
+          echo "ACR_NAME=acr${APP_NAME}${ENV_NAME}${AZURE_LOCATION}" | tr -d '-' >> $GITHUB_ENV
+          echo "RESOURCE_GROUP=rg-${APP_NAME}-${ENV_NAME}-${AZURE_LOCATION}" >> $GITHUB_ENV
+          echo "WEB_APP_NAME=app-${APP_NAME}-${ENV_NAME}-${AZURE_LOCATION}" >> $GITHUB_ENV
+          echo "IMAGE_TAG=${GITHUB_SHA::8}" >> $GITHUB_ENV
+
+      - name: Build and push Docker image to ACR
+        run: |
+          az acr build \
+            --registry ${{ env.ACR_NAME }} \
+            --image zava-storefront:${{ env.IMAGE_TAG }} \
+            --image zava-storefront:latest \
+            --file Dockerfile \
+            ./src
+
+      - name: Update Web App with new image
+        run: |
+          az webapp config container set \
+            --name ${{ env.WEB_APP_NAME }} \
+            --resource-group ${{ env.RESOURCE_GROUP }} \
+            --docker-custom-image-name ${{ env.ACR_NAME }}.azurecr.io/zava-storefront:${{ env.IMAGE_TAG }}
+          
+          # Restart the web app to pull the new image
+          az webapp restart \
+            --name ${{ env.WEB_APP_NAME }} \
+            --resource-group ${{ env.RESOURCE_GROUP }}
+
+      - name: Display deployment information
+        run: |
+          echo "Deployment completed successfully!"
+          echo "Environment: ${{ env.ENVIRONMENT_NAME }}"
+          echo "Resource Group: ${{ env.RESOURCE_GROUP }}"
+          echo "Web App: ${{ env.WEB_APP_NAME }}"
+          echo "Image: ${{ env.ACR_NAME }}.azurecr.io/zava-storefront:${{ env.IMAGE_TAG }}"
+          
+          # Get the Web App URL
+          WEB_APP_URL=$(az webapp show \
+            --name ${{ env.WEB_APP_NAME }} \
+            --resource-group ${{ env.RESOURCE_GROUP }} \
+            --query "defaultHostName" \
+            --output tsv)
+          echo "Web App URL: https://${WEB_APP_URL}"

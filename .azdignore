@@ -1,0 +1,42 @@
+# Azure Developer CLI ignore file
+
+# Git
+.git/
+.gitignore
+.gitattributes
+
+# CI/CD
+.github/
+.azuredevops/
+
+# Documentation
+docs/
+*.md
+!infra/README.md
+
+# Development
+.vscode/
+.vs/
+.idea/
+*.suo
+*.user
+
+# Build outputs
+bin/
+obj/
+out/
+publish/
+
+# Dependencies
+node_modules/
+packages/
+
+# Logs
+*.log
+logs/
+
+# Temporary files
+*.tmp
+*.temp
+.DS_Store
+Thumbs.db

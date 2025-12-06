@@ -1,0 +1,40 @@
+# yaml-language-server: $schema=https://raw.githubusercontent.com/Azure/azure-dev/main/schemas/v1.0/azure.yaml.json
+
+name: zavastore
+metadata:
+  template: zavastore-app@0.0.1-beta
+
+services:
+  web:
+    project: ./src
+    language: csharp
+    host: appservice
+    docker:
+      path: ./Dockerfile
+      context: ./src
+
+hooks:
+  postprovision:
+    shell: sh
+    run: |
+      echo "Infrastructure provisioned successfully"
+      echo "ACR Name: $AZURE_ACR_NAME"
+      echo "Web App Name: $AZURE_WEB_APP_NAME"
+    continueOnError: false
+    interactive: true
+
+  predeploy:
+    shell: sh
+    run: |
+      echo "Building and pushing Docker image to ACR..."
+      az acr build --registry $AZURE_ACR_NAME --image zava-storefront:$AZURE_IMAGE_TAG --file Dockerfile ./src
+    continueOnError: false
+    interactive: true
+
+  postdeploy:
+    shell: sh
+    run: |
+      echo "Deployment complete!"
+      echo "Web App URL: https://$AZURE_WEB_APP_HOSTNAME"
+    continueOnError: false
+    interactive: true
